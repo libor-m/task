@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/Ladicle/tabwriter"
 	"github.com/fatih/color"
@@ -137,6 +138,7 @@ type Logger struct {
 	Color      bool
 	AssumeYes  bool
 	AssumeTerm bool // Used for testing
+	mu         sync.Mutex
 }
 
 // Outf prints stuff to STDOUT.
@@ -153,6 +155,9 @@ func (l *Logger) FOutf(w io.Writer, color Color, s string, args ...any) {
 		color = None
 	}
 	print := color()
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	print(w, s, args...)
 }
 
@@ -172,6 +177,9 @@ func (l *Logger) Errf(color Color, s string, args ...any) {
 		color = None
 	}
 	print := color()
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	print(l.Stderr, s, args...)
 }
 
