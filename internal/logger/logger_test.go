@@ -176,7 +176,7 @@ func TestResetLineStart(t *testing.T) {
 		}
 	})
 
-	t.Run("does not change non terminal output", func(t *testing.T) {
+	t.Run("does not change non-terminal output", func(t *testing.T) {
 		t.Parallel()
 		if got := resetLineStart("task: hello\n", false); got != "task: hello\n" {
 			t.Fatalf("expected unchanged string, got %q", got)

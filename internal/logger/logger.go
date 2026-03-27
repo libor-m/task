@@ -11,12 +11,12 @@ import (
 
 	"github.com/Ladicle/tabwriter"
 	"github.com/fatih/color"
-	xterm "golang.org/x/term"
+	termpkg "golang.org/x/term"
 
 	"github.com/go-task/task/v3/errors"
 	"github.com/go-task/task/v3/experiments"
 	"github.com/go-task/task/v3/internal/env"
-	"github.com/go-task/task/v3/internal/term"
+	internalterm "github.com/go-task/task/v3/internal/term"
 )
 
 var (
@@ -153,7 +153,6 @@ func (l *Logger) FOutf(w io.Writer, color Color, s string, args ...any) {
 	if len(args) == 0 {
 		s, args = "%s", []any{s}
 	}
-	s = resetLineStart(s, isTerminalWriter(w))
 	if !l.Color {
 		color = None
 	}
@@ -201,7 +200,7 @@ func isTerminalWriter(w io.Writer) bool {
 		return false
 	}
 
-	return xterm.IsTerminal(int(f.Fd()))
+	return termpkg.IsTerminal(int(f.Fd()))
 }
 
 // VerboseErrf prints stuff to STDERR if verbose mode is enabled.
@@ -221,7 +220,7 @@ func (l *Logger) Prompt(color Color, prompt string, defaultValue string, continu
 		return nil
 	}
 
-	if !l.AssumeTerm && !term.IsTerminal() {
+	if !l.AssumeTerm && !internalterm.IsTerminal() {
 		return ErrNoTerminal
 	}
 
