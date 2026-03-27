@@ -3,6 +3,7 @@ package logger
 import (
 	"bufio"
 	"io"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/Ladicle/tabwriter"
 	"github.com/fatih/color"
+	xterm "golang.org/x/term"
 
 	"github.com/go-task/task/v3/errors"
 	"github.com/go-task/task/v3/experiments"
@@ -151,6 +153,7 @@ func (l *Logger) FOutf(w io.Writer, color Color, s string, args ...any) {
 	if len(args) == 0 {
 		s, args = "%s", []any{s}
 	}
+	s = resetLineStart(s, isTerminalWriter(w))
 	if !l.Color {
 		color = None
 	}
@@ -173,6 +176,7 @@ func (l *Logger) Errf(color Color, s string, args ...any) {
 	if len(args) == 0 {
 		s, args = "%s", []any{s}
 	}
+	s = resetLineStart(s, isTerminalWriter(l.Stderr))
 	if !l.Color {
 		color = None
 	}
@@ -181,6 +185,23 @@ func (l *Logger) Errf(color Color, s string, args ...any) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	print(l.Stderr, s, args...)
+}
+
+func resetLineStart(s string, isTerminal bool) string {
+	if !isTerminal || !strings.HasSuffix(s, "\n") || strings.HasPrefix(s, "\r") {
+		return s
+	}
+
+	return "\r" + s
+}
+
+func isTerminalWriter(w io.Writer) bool {
+	f, ok := w.(*os.File)
+	if !ok {
+		return false
+	}
+
+	return xterm.IsTerminal(int(f.Fd()))
 }
 
 // VerboseErrf prints stuff to STDERR if verbose mode is enabled.

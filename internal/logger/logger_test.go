@@ -42,7 +42,7 @@ func TestRaceConditionBug(t *testing.T) {
 	wg.Wait()
 
 	output := buf.String()
-	
+
 	// Verify we got output
 	if len(output) == 0 {
 		t.Fatal("Expected output but got none")
@@ -164,4 +164,36 @@ func TestConcurrentMixedColors(t *testing.T) {
 	if buf.Len() == 0 {
 		t.Error("Expected output but got none")
 	}
+}
+
+func TestResetLineStart(t *testing.T) {
+	t.Parallel()
+
+	t.Run("prepends carriage return for terminal lines", func(t *testing.T) {
+		t.Parallel()
+		if got := resetLineStart("task: hello\n", true); got != "\rtask: hello\n" {
+			t.Fatalf("expected carriage return prefix, got %q", got)
+		}
+	})
+
+	t.Run("does not change non terminal output", func(t *testing.T) {
+		t.Parallel()
+		if got := resetLineStart("task: hello\n", false); got != "task: hello\n" {
+			t.Fatalf("expected unchanged string, got %q", got)
+		}
+	})
+
+	t.Run("does not change partial lines", func(t *testing.T) {
+		t.Parallel()
+		if got := resetLineStart("task: hello", true); got != "task: hello" {
+			t.Fatalf("expected unchanged partial line, got %q", got)
+		}
+	})
+
+	t.Run("does not double prepend carriage return", func(t *testing.T) {
+		t.Parallel()
+		if got := resetLineStart("\rtask: hello\n", true); got != "\rtask: hello\n" {
+			t.Fatalf("expected unchanged carriage return line, got %q", got)
+		}
+	})
 }
