@@ -3,17 +3,20 @@ package logger
 import (
 	"bufio"
 	"io"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/Ladicle/tabwriter"
 	"github.com/fatih/color"
+	termpkg "golang.org/x/term"
 
 	"github.com/go-task/task/v3/errors"
 	"github.com/go-task/task/v3/experiments"
 	"github.com/go-task/task/v3/internal/env"
-	"github.com/go-task/task/v3/internal/term"
+	internalterm "github.com/go-task/task/v3/internal/term"
 )
 
 var (
@@ -137,6 +140,7 @@ type Logger struct {
 	Color      bool
 	AssumeYes  bool
 	AssumeTerm bool // Used for testing
+	mu         sync.Mutex
 }
 
 // Outf prints stuff to STDOUT.
@@ -153,6 +157,9 @@ func (l *Logger) FOutf(w io.Writer, color Color, s string, args ...any) {
 		color = None
 	}
 	print := color()
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	print(w, s, args...)
 }
 
@@ -168,11 +175,32 @@ func (l *Logger) Errf(color Color, s string, args ...any) {
 	if len(args) == 0 {
 		s, args = "%s", []any{s}
 	}
+	s = resetLineStart(s, isTerminalWriter(l.Stderr))
 	if !l.Color {
 		color = None
 	}
 	print := color()
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	print(l.Stderr, s, args...)
+}
+
+func resetLineStart(s string, isTerminal bool) string {
+	if !isTerminal || !strings.HasSuffix(s, "\n") || strings.HasPrefix(s, "\r") {
+		return s
+	}
+
+	return "\r" + s
+}
+
+func isTerminalWriter(w io.Writer) bool {
+	f, ok := w.(*os.File)
+	if !ok {
+		return false
+	}
+
+	return termpkg.IsTerminal(int(f.Fd()))
 }
 
 // VerboseErrf prints stuff to STDERR if verbose mode is enabled.
@@ -192,7 +220,7 @@ func (l *Logger) Prompt(color Color, prompt string, defaultValue string, continu
 		return nil
 	}
 
-	if !l.AssumeTerm && !term.IsTerminal() {
+	if !l.AssumeTerm && !internalterm.IsTerminal() {
 		return ErrNoTerminal
 	}
 
